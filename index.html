@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 800px; 
+            margin: 20px;
+            background-color: #ffffff; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); 
+            display: flex;
+            flex-direction: column;
+            height: 85vh; 
+            overflow: hidden; 
+        }
+        h1 {
+            text-align: center;
+            color: #1a2e4a; 
+            margin-top: 0;
+            margin-bottom: 25px; 
+            font-size: 2em; 
+            font-weight: 600; 
+        }
+        #chatbox {
+            flex-grow: 1; 
+            overflow-y: auto; 
+            border: none; 
+            padding: 0 15px 15px 15px; 
+            margin-bottom: 20px; 
+            background-color: #ffffff; 
+            display: flex;
+            flex-direction: column; 
+            gap: 15px; 
+        }
+        .message {
+            margin-bottom: 0; 
+            padding: 14px 18px; 
+            border-radius: 22px; 
+            max-width: 75%; 
+            word-wrap: break-word; 
+            line-height: 1.6;
+            font-size: 1.05em;
+        }
+        .user-message {
+            background-color: #007bff; 
+            color: white;
+            align-self: flex-end; 
+            border-bottom-right-radius: 8px; 
+        }
+        .bot-message {
+            background-color: #e9ecef; 
+            color: #333;
+            align-self: flex-start; 
+            border-bottom-left-radius: 8px; 
+        }
+        .input-area {
+            display: flex;
+            gap: 15px; 
+            padding-top: 15px; 
+            border-top: 1px solid #e0e0e0; 
+        }
+        #userInput {
+            flex-grow: 1;
+            padding: 14px 18px; 
+            border: 1px solid #ced4da; 
+            border-radius: 22px; 
+            outline: none;
+            font-size: 1em;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease; 
+        }
+        #userInput:focus {
+            border-color: #007bff; 
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.25); 
+        }
+        button {
+            padding: 14px 30px; 
+            background-color: #28a745; 
+            color: white;
+            border: none;
+            border-radius: 22px; 
+            cursor: pointer;
+            outline: none;
+            font-size: 1em;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.1s ease; /* Smooth transitions */
+        }
+        button:hover {
+            background-color: #218838; 
+        }
+        button:active {
+            transform: scale(0.98); 
+        }
+
+        /* CSS for typing cursor */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background-color: #333;
+            margin-left: 2px;
+            animation: blink 1s ease infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .video-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 90%;
+        }
+        
+        .video-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        
+        .video-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .video-embed {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .video-info {
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .video-title {
+            font-size: 0.95em;
+            color: #2c3e50;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .video-meta {
+            font-size: 0.85em;
+            color: #666;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bot-message .video-container {
+            margin-top: 15px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background-color: #ffe6e6;
+        }
+        
+        .loading {
+            display: inline-block;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Chatbot</h1>
+        <div id="chatbox">
+            <div class="message bot-message">Halo! Ada yang bisa saya bantu hari ini?</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ketik pesan Anda di sini...">
+            <button onclick="sendMessage()">Kirim</button>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const userInput = document.getElementById('userInput');
+
+        // Function to simulate typing effect
+        function getRandomDelay(char) {
+            // Longer delays for punctuation marks
+            if ('.!?'.includes(char)) return Math.random() * 500 + 500;
+            if (',;:'.includes(char)) return Math.random() * 300 + 200;
+            if (' '.includes(char)) return Math.random() * 100 + 50;
+            // Random delay for regular characters
+            return Math.random() * 50 + 30;
+        }
+
+        function typeMessage(element, textHTML, baseDelay = 30) {
+            return new Promise((resolve) => {
+                let i = 0;
+                element.innerHTML = ''; // Clear initial content
+                const cursor = document.createElement('span');
+                cursor.classList.add('typing-cursor');
+                element.appendChild(cursor); // Add cursor initially
+
+                async function type() {
+                    if (i < textHTML.length) {
+                        // Append the next character or handle HTML tags like <br>
+                        if (textHTML.substring(i, i + 4) === '<br>') {
+                            element.innerHTML = textHTML.substring(0, i + 4); // Include <br>
+                            i += 4;
+                            await new Promise(r => setTimeout(r, 500)); // Pause at line breaks
+                        } else {
+                            const char = textHTML.charAt(i);
+                            element.innerHTML = textHTML.substring(0, i + 1); // Append character
+                            i++;
+                            await new Promise(r => setTimeout(r, getRandomDelay(char)));
+                        }
+
+                        // Re-append cursor after updating content
+                        if (!element.contains(cursor)) {
+                            element.appendChild(cursor);
+                        }
+
+                        chatbox.scrollTop = chatbox.scrollHeight; // Keep scrolling during typing
+                        type();
+                    } else {
+                        setTimeout(() => {
+                            // Typing finished, remove cursor
+                            if (element.contains(cursor)) {
+                                element.removeChild(cursor);
+                            }
+                            resolve();
+                        }, 500); // Keep cursor for a moment after typing
+                    }
+                }
+                type();
+            });
+        }
+
+        function createVideoEmbed(videoData) {
+            const videoId = videoData.link.match(/(?:v=|\/)([\w-]{11})(?:\?|$|&)/)[1];
+            const videoCard = document.createElement('div');
+            videoCard.className = 'video-card';
+            
+            videoCard.innerHTML = `
+                <iframe class="video-embed"
+                        src="https://www.youtube.com/embed/${videoId}?rel=0"
+                        title="${videoData.title}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                <div class="video-info">
+                    <div class="video-title">${videoData.title}</div>
+                    <div class="video-meta">
+                        <span>⏱️ ${videoData.duration || 'N/A'}</span>
+                        ${videoData.views ? `<span>👁️ ${videoData.views}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            return videoCard;
+        }
+
+        function displayMessage(message, sender, videos = null) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', `${sender}-message`);
+
+            if (sender === 'bot') {
+                let cleanedMessage = message.replace(/<\/?think>/g, '').trim();
+                const formattedMessageHTML = cleanedMessage.replace(/\n/g, '<br>');
+
+                // Create text content first
+                const textContent = document.createElement('div');
+                textContent.className = 'message-text';
+                chatbox.appendChild(messageElement);
+                typeMessage(textContent, formattedMessageHTML).then(() => {
+                    messageElement.appendChild(textContent);
+                    
+                    // Add videos if available
+                    if (videos && videos.length > 0) {
+                        const videoContainer = document.createElement('div');
+                        videoContainer.className = 'video-container';
+                        
+                        videos.forEach(videoData => {
+                            const videoCard = createVideoEmbed(videoData);
+                            videoContainer.appendChild(videoCard);
+                        });
+                        
+                        messageElement.appendChild(videoContainer);
+                    }
+                    
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                });
+            } else {
+                messageElement.textContent = message;
+                chatbox.appendChild(messageElement);
+                chatbox.scrollTop = chatbox.scrollHeight;
+            }
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message === '') return;
+
+            const button = document.querySelector('button');
+            button.disabled = true;
+            button.innerHTML = 'Mengirim...';
+            
+            displayMessage(message, 'user');
+            userInput.value = '';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Terjadi kesalahan pada server');
+                }
+
+                if (data.reply) {
+                    displayMessage(data.reply, 'bot', data.videos);
+                } else {
+                    throw new Error('Tidak ada respons dari AI');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                displayMessage(`Maaf, terjadi kesalahan: ${error.message}`, 'bot');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = 'Kirim';
+            }
+        }
+
+        // Allow sending message by pressing Enter key
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
